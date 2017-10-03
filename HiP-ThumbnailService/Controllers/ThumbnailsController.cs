@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.Options;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Helpers;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 
@@ -82,8 +80,10 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             return NoContent();
         }
 
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id, string size, CropMode mode, RequestedImageFormat imageFormat)
+        public IActionResult Get(string id, string size, CropMode mode, RequestedImageFormat imageFormat)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
