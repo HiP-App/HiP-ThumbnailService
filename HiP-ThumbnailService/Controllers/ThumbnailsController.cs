@@ -1,6 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -45,7 +47,8 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             if (!_uploadConfig.SupportedFormats.Contains(ext.ToLower()))
                 return BadRequest(new { Message = $"Extension '{ext}' is not supported" });
 
-            var folderPath = Path.Combine(_uploadConfig.Path, id);
+            var encodedId = Convert.ToBase64String(Encoding.UTF8.GetBytes(id));
+            var folderPath = Path.Combine(_uploadConfig.Path, encodedId);
 
             var semaphore = LockDictionary.GetOrAdd(id, new SemaphoreSlim(1));
 
@@ -83,8 +86,8 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-            var folderPath = Path.Combine(_uploadConfig.Path, id);
+            var encodedId = Convert.ToBase64String(Encoding.UTF8.GetBytes(id));
+            var folderPath = Path.Combine(_uploadConfig.Path, encodedId);
             if (!Directory.Exists(folderPath))
                 return BadRequest(new { Message = "No directory was found for this id" });
 
