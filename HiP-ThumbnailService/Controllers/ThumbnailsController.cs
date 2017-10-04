@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,12 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
     {
         private const string SubFolderName = "Thumbnails";
         private readonly UploadFilesConfig _uploadConfig;
-        private SizeConfig _sizeConfig;
+        private readonly SizeConfig _sizeConfig;
+
+        /// <summary>
+        /// This dictionary is used for synchronizaing requests for the same id
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> LockDictionary = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         public ThumbnailsController(IOptions<UploadFilesConfig> uploadConfig, IOptions<SizeConfig> sizeConfig)
         {
@@ -33,84 +39,96 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var ext = Path.GetExtension(file.FileName);
 
+            var ext = Path.GetExtension(file.FileName);
             //Check for supported extensions
             if (!_uploadConfig.SupportedFormats.Contains(ext.ToLower()))
                 return BadRequest(new { Message = $"Extension '{ext}' is not supported" });
 
             var folderPath = Path.Combine(_uploadConfig.Path, id);
 
-            //clear folder
-            if (Directory.Exists(folderPath))
-            {
-                var folder = new DirectoryInfo(folderPath);
-                var subfolders = folder.EnumerateDirectories();
-                //Delete all files before deleting the directories
-                foreach (var subfolder in subfolders)
-                {
-                    DeleteFilesForFolder(subfolder.EnumerateFiles());
-                    subfolder.Delete();
-                }
-                DeleteFilesForFolder(folder.EnumerateFiles());
-                folder.Delete(true);
+            var semaphore = LockDictionary.GetOrAdd(id, new SemaphoreSlim(1));
 
-                //Delete all files in a specific folder
-                void DeleteFilesForFolder(IEnumerable<FileInfo> files)
+            await semaphore.WaitAsync();
+            try
+            {
+                //clear folder
+                if (Directory.Exists(folderPath))
                 {
-                    foreach (var f in folder.GetFiles())
+                    var folder = new DirectoryInfo(folderPath);
+                    folder.Delete(true);
+                }
+
+                var filePath = Path.Combine(folderPath, Path.GetFileName(file.FileName));
+                if (file.Length > 0)
+                {
+                    var f = Directory.CreateDirectory(folderPath);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
                     {
-                        f.Delete();
+                        await file.CopyToAsync(stream);
                     }
                 }
-
+                return NoContent();
             }
-
-            var filePath = Path.Combine(folderPath, Path.GetFileName(file.FileName));
-            if (file.Length > 0)
+            finally
             {
-                Directory.CreateDirectory(folderPath);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
+                semaphore.Release();
             }
-
-            return NoContent();
         }
 
         [ProducesResponseType(400)]
         [ProducesResponseType(200)]
         [HttpGet("{id}")]
-        public IActionResult Get(string id, string size, CropMode mode, RequestedImageFormat imageFormat)
+        public async Task<IActionResult> Get(string id, CreationArgs args)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var folderPath = Path.Combine(_uploadConfig.Path, id);
             if (!Directory.Exists(folderPath))
-                return BadRequest(new { Message = "No image was found for this id" });
+                return BadRequest(new { Message = "No directory was found for this id" });
 
-            var folder = new DirectoryInfo(folderPath);
-            var file = folder.EnumerateFiles().FirstOrDefault();
-            if (file == null) return BadRequest();
+            if (string.IsNullOrEmpty(args.Size) || !_sizeConfig.SupportedSizes.ContainsKey(args.Size))
+                return BadRequest(new { Message = "Invalid size" });
 
-            var subfolder = folder.GetDirectories().FirstOrDefault(d => d.Name.Equals(SubFolderName)) ??
-                Directory.CreateDirectory(Path.Combine(folder.FullName, SubFolderName));
+            var semaphore = LockDictionary.GetOrAdd(id, new SemaphoreSlim(1));
+            await semaphore.WaitAsync();
+            try
+            {
+                var folder = new DirectoryInfo(folderPath);
+                var file = folder.EnumerateFiles().FirstOrDefault();
+                if (file == null)
+                {
+                    semaphore.Release();
+                    return BadRequest(new { Message = "No image was found for this id" });
+                }
 
-            if (!_sizeConfig.SupportedSizes.ContainsKey(size)) return BadRequest(new { Message = "Invalid size" });
+                var subfolder = folder.GetDirectories().FirstOrDefault(d => d.Name.Equals(SubFolderName)) ??
+                                Directory.CreateDirectory(Path.Combine(folder.FullName, SubFolderName));
 
-            var extension = RequestImageFormatUtils.GetExtension(imageFormat);
-            var thumbnailPath = Path.Combine(subfolder.FullName, GetFileName(size, mode)) + "." + extension;
+                var extension = RequestImageFormatUtils.GetExtension(args.Format);
+                var thumbnailPath = Path.Combine(subfolder.FullName, GetFileName(args.Size, args.Mode)) + "." +
+                                    extension;
 
-            var value = _sizeConfig.SupportedSizes[size];
-            SaveThumbnail(mode, file.FullName, thumbnailPath, value);
+                var value = _sizeConfig.SupportedSizes[args.Size];
+                GenerateThumbnail(args.Mode, file.FullName, thumbnailPath, value);
+                return File(new FileStream(thumbnailPath, FileMode.Open), $"image/{extension}", Path.GetFileName(thumbnailPath));
+            }
+            finally
+            {
+                semaphore.Release();
+            }
 
-            return File(new FileStream(thumbnailPath, FileMode.Open), $"image/{extension}", Path.GetFileName(thumbnailPath));
         }
 
-        private static void SaveThumbnail(CropMode mode, string filename, string thumbnailPath, int value)
+        /// <summary>
+        /// Generates a thumbnail, if it doesn't exist yet
+        /// </summary>
+        /// <param name="mode">Crop mode</param>
+        /// <param name="filename">File name</param>
+        /// <param name="thumbnailPath">Path to thumbnail</param>
+        /// <param name="value">Size value</param>
+        private static void GenerateThumbnail(CropMode mode, string filename, string thumbnailPath, int value)
         {
             if (!System.IO.File.Exists(thumbnailPath))
             {
@@ -121,7 +139,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                         using (var image = Image.Load(filename))
                         {
                             image.Mutate(c =>
-                                c.Resize(new ResizeOptions() { Mode = ResizeMode.Crop, Size = new Size(value) }));
+                                c.Resize(new ResizeOptions { Mode = ResizeMode.Crop, Size = new Size(value) }));
                             image.Save(thumbnailPath);
                         }
                         break;
@@ -129,7 +147,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                         using (var image = Image.Load(filename))
                         {
                             image.Mutate(c =>
-                                c.Resize(new ResizeOptions() { Mode = ResizeMode.Max, Size = new Size(value) }));
+                                c.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(value) }));
                             image.Save(thumbnailPath);
                         }
                         break;
