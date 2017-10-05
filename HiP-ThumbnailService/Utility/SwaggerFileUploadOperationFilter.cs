@@ -10,7 +10,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Utility
     {
         public void Apply(Operation operation,OperationFilterContext context)
         {
-            var fileParam = context.ApiDescription.ParameterDescriptions.FirstOrDefault(x => x.ModelMetadata.ModelType == typeof(IFormFile));
+            var fileParam = context.ApiDescription.ParameterDescriptions.FirstOrDefault(x => x?.ModelMetadata.ModelType == typeof(IFormFile));
 
             if (fileParam != null)
             {

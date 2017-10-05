@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,21 +25,45 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
-
             // Register the Swagger generator
             services.AddSwaggerGen(c =>
             {
                 // Define a Swagger document
                 c.SwaggerDoc("v1", new Info { Title = Name, Version = Version });
                 c.OperationFilter<SwaggerOperationFilter>();
-                c.OperationFilter<SwaggerFileUploadOperationFilter>();
                 c.DescribeAllEnumsAsStrings();
             });
 
-            services.Configure<EndpointConfig>(Configuration.GetSection("Endpoints"))
-                .Configure<UploadFilesConfig>(Configuration.GetSection("UploadFiles"))
-                .Configure<SizeConfig>(Configuration.GetSection("SizeConfig"));
+            services.Configure<EndpointConfig>(Configuration.GetSection("EndpointConfig"))
+                .Configure<DirConfig>(Configuration.GetSection("DirConfig"))
+                .Configure<SizeConfig>(Configuration.GetSection("SizeConfig"))
+                .Configure<AuthConfig>(Configuration.GetSection("Auth"));
+
+            var serviceProvider = services.BuildServiceProvider(); // allows us to actually get the configured services
+            var authConfig = serviceProvider.GetService<IOptions<AuthConfig>>();
+
+            // Configure authentication
+            services
+                .AddAuthentication(options => options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Audience = authConfig.Value.Audience;
+                    options.Authority = authConfig.Value.Authority;
+                });
+
+            // Configure authorization
+            var domain = authConfig.Value.Authority;
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("read:datastore",
+                    policy => policy.Requirements.Add(new HasScopeRequirement("read:datastore", domain)));
+                //options.AddPolicy("write:datastore",
+                //    policy => policy.Requirements.Add(new HasScopeRequirement("write:datastore", domain)));
+                //options.AddPolicy("write:cms",
+                //    policy => policy.Requirements.Add(new HasScopeRequirement("write:cms", domain)));
+            });
+
+            services.AddMvc();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +74,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseAuthentication();
             app.UseMvc();
 
             // Swagger / Swashbuckle configuration:
@@ -67,6 +93,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 
                 c.SwaggerEndpoint(swaggerJsonUrl, $"{Name} {Version}");
             });
+
         }
     }
 }

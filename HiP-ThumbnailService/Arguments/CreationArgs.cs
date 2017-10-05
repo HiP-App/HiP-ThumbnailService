@@ -4,6 +4,8 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
 {
     public class CreationArgs
     {
+        public string Url { get; set; }
+        
         public string Size { get; set; }
 
         /// <summary>
