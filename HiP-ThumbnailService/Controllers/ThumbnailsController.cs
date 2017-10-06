@@ -49,13 +49,9 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             await semaphore.WaitAsync();
             try
             {
-                //clear folder
+                //delete the folder
                 if (Directory.Exists(folderPath))
-                {
-                    var folder = new DirectoryInfo(folderPath);
-                    folder.Delete(true);
-                }
-
+                    Directory.Delete(folderPath, true);
                 return NoContent();
             }
             finally
@@ -94,7 +90,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                     client.DefaultRequestHeaders.Add("Authorization", Request.Headers["Authorization"].ToString());
                     var hostUrl = _thumbnailConfig.HostUrl;
                     var stream = await client.GetStreamAsync(hostUrl + args.Url);
-                    
+
                     //Create Directory if it doesn't exist
                     Directory.CreateDirectory(folderPath);
 
