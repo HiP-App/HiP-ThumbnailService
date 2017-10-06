@@ -12,6 +12,5 @@ WORKDIR /dotnetapp/HiP-ThumbnailService
 EXPOSE 5000
 
 RUN dotnet restore --no-cache
-RUN ["chmod", "+x", "/dotnetapp/HiP-ThumbnailService/run.sh”]
 
 CMD /dotnetapp/HiP-ThumbnailService/run.sh
