@@ -8,23 +8,19 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
 
     }
 
-    public class RequestImageFormatUtils
+    public static class RequestImageFormatUtils
     {
-        public static string GetExtension(RequestedImageFormat format)
+        public static string GetExtension(this RequestedImageFormat format)
         {
-            string extension;
             switch (format)
             {
                 case RequestedImageFormat.Jpeg:
-                    extension = "jpg";
-                    break;
+                    return "jpg";
                 case RequestedImageFormat.Png:
-                    extension = "png";
-                    break;
+                    return "png";
                 default:
                     throw new ArgumentOutOfRangeException("Unexpected image format");
             }
-            return extension;
 
         }
     }

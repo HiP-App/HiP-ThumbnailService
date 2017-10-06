@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Utility\DirConfig.cs" />
     <Compile Remove="Utility\SwaggerFileUploadOperationFilter.cs" />
   </ItemGroup>
 

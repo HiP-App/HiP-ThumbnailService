@@ -35,8 +35,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
             });
 
             services.Configure<EndpointConfig>(Configuration.GetSection("EndpointConfig"))
-                .Configure<DirConfig>(Configuration.GetSection("DirConfig"))
-                .Configure<SizeConfig>(Configuration.GetSection("SizeConfig"))
+                .Configure<ThumbnailConfig>(Configuration.GetSection("ThumbnailConfig"))
                 .Configure<AuthConfig>(Configuration.GetSection("Auth"));
 
             var serviceProvider = services.BuildServiceProvider(); // allows us to actually get the configured services
