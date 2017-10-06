@@ -15,7 +15,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
             switch (format)
             {
                 case RequestedImageFormat.Jpeg:
-                    return "jpg";
+                    return "jpeg";
                 case RequestedImageFormat.Png:
                     return "png";
                 default:

@@ -60,6 +60,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             }
         }
 
+        [ProducesResponseType(404)]
         [ProducesResponseType(400)]
         [ProducesResponseType(200)]
         [HttpGet]
@@ -114,7 +115,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
         }
 
         /// <summary>
-        /// Generates a thumbnail
+        /// Generates a new thumbnail which replaces the old thumbnail
         /// </summary>
         /// <param name="mode">Crop mode</param>
         /// <param name="fileStream">File stream</param>
