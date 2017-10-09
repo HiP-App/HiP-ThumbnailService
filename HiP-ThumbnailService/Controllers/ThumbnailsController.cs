@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -11,6 +13,8 @@ using Microsoft.Extensions.Options;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 
@@ -75,17 +79,17 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             var encodedId = Convert.ToBase64String(Encoding.UTF8.GetBytes(args.Url));
             var folderPath = Path.Combine(_thumbnailConfig.Path, encodedId);
 
-            if (string.IsNullOrEmpty(args.Size) || !_thumbnailConfig.SupportedSizes.ContainsKey(args.Size))
+            if (!string.IsNullOrEmpty(args.Size) && !_thumbnailConfig.SupportedSizes.ContainsKey(args.Size))
                 return BadRequest(new { Message = "Invalid size" });
 
             var semaphore = LockDictionary.GetOrAdd(encodedId, new SemaphoreSlim(1));
             await semaphore.WaitAsync();
             try
             {
-                var extension = args.Format.GetExtension();
-                var thumbnailPath = Path.Combine(folderPath, GetFileName(args.Size, args.Mode)) + "." +
-                                    extension;
-                if (!System.IO.File.Exists(thumbnailPath))
+                var imageFormat = args.Format.GetExtension();
+                var filePath = Path.Combine(folderPath, GetFileName(args.Size, args.Mode)) + "." +
+                                    imageFormat.FileExtensions.First();
+                if (!System.IO.File.Exists(filePath))
                 {
                     var client = new HttpClient();
                     client.DefaultRequestHeaders.Add("Authorization", Request.Headers["Authorization"].ToString());
@@ -95,12 +99,20 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                     //Create Directory if it doesn't exist
                     Directory.CreateDirectory(folderPath);
 
-                    var value = _thumbnailConfig.SupportedSizes[args.Size];
-                    GenerateThumbnail(args.Mode, stream, thumbnailPath, value);
+                    if (string.IsNullOrEmpty(args.Size))
+                    {
+                        //The original image should be returned if the size is empty
+                        SaveImage(stream, filePath);
+                    }
+                    else
+                    {
+                        var value = _thumbnailConfig.SupportedSizes[args.Size];
+                        GenerateThumbnail(args.Mode, stream, filePath, value);
+                    }
                 }
 
-                return File(new FileStream(thumbnailPath, FileMode.Open), $"image/{extension}",
-                    Path.GetFileName(thumbnailPath));
+                return File(new FileStream(filePath, FileMode.Open), imageFormat.DefaultMimeType,
+                    Path.GetFileName(filePath));
 
             }
             catch (HttpRequestException)
@@ -126,7 +138,6 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             ResizeMode resizeMode = ResizeMode.Crop;
             switch (mode)
             {
-
                 case CropMode.FillSquare:
                     resizeMode = ResizeMode.Crop;
                     break;
@@ -135,15 +146,23 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                     break;
             }
 
+            SaveImage(fileStream, thumbnailPath,
+                c => c.Resize(new ResizeOptions { Mode = resizeMode, Size = new Size(value) }));
+
+        }
+
+        private static void SaveImage(Stream fileStream, string filePath, Action<IImageProcessingContext<Rgba32>> operation = null)
+        {
             using (var image = Image.Load(fileStream))
             {
-                image.Mutate(c =>
-                    c.Resize(new ResizeOptions { Mode = resizeMode, Size = new Size(value) }));
-                image.Save(thumbnailPath);
+                if (operation != null)
+                    image.Mutate(operation);
+
+                image.Save(filePath);
             }
         }
 
-        private static string GetFileName(string size, CropMode mode) => $"{size}({mode})";
+        private static string GetFileName(string size, CropMode mode) => string.IsNullOrEmpty(size) ? "originalImage" : $"{size}({mode})";
 
     }
 
