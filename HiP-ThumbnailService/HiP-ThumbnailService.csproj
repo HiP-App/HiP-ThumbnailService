@@ -20,10 +20,6 @@
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="appsettings.Development.json" />
-  </ItemGroup>
-
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>
