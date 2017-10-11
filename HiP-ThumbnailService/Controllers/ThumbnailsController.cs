@@ -86,38 +86,45 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             await semaphore.WaitAsync();
             try
             {
-                var imageFormat = args.Format.GetExtension();
+                var requestedImageFormat = args.Format.GetImageFormat();
                 var filePath = Path.Combine(folderPath, GetFileName(args.Size, args.Mode)) + "." +
-                                    imageFormat.FileExtensions.First();
+                               requestedImageFormat.FileExtensions.First();
                 if (!System.IO.File.Exists(filePath))
                 {
                     var client = new HttpClient();
                     client.DefaultRequestHeaders.Add("Authorization", Request.Headers["Authorization"].ToString());
                     var hostUrl = _thumbnailConfig.HostUrl;
-                    var stream = await client.GetStreamAsync(hostUrl + args.Url);
-
-                    //Create Directory if it doesn't exist
-                    Directory.CreateDirectory(folderPath);
-
-                    if (string.IsNullOrEmpty(args.Size))
+                    using (var stream = await client.GetStreamAsync(hostUrl + args.Url))
                     {
-                        //The original image should be returned if the size is empty
-                        SaveImage(stream, filePath);
+
+                        //Create Directory if it doesn't exist
+                        Directory.CreateDirectory(folderPath);
+
+                        if (string.IsNullOrEmpty(args.Size))
+                        {
+                            //The original image should be returned if the size is empty
+                            SaveImage(stream, filePath);
+                        }
+                        else
+                        {
+                            var value = _thumbnailConfig.SupportedSizes[args.Size];
+                            GenerateThumbnail(args.Mode, stream, filePath, value);
+                        }
                     }
-                    else
-                    {
-                        var value = _thumbnailConfig.SupportedSizes[args.Size];
-                        GenerateThumbnail(args.Mode, stream, filePath, value);
-                    }
+
                 }
 
-                return File(new FileStream(filePath, FileMode.Open), imageFormat.DefaultMimeType,
+                return File(new FileStream(filePath, FileMode.Open), requestedImageFormat.DefaultMimeType,
                     Path.GetFileName(filePath));
 
             }
             catch (HttpRequestException)
             {
                 return NotFound(new { Message = "Image access failed" });
+            }
+            catch (NotSupportedException)
+            {
+                return BadRequest(new { Message = "The format of the requested image is not supported" });
             }
             finally
             {

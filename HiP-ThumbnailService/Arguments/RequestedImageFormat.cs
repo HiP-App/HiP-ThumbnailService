@@ -12,7 +12,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
 
     public static class RequestImageFormatUtils
     {
-        public static IImageFormat GetExtension(this RequestedImageFormat format)
+        public static IImageFormat GetImageFormat(this RequestedImageFormat format)
         {
             switch (format)
             {
