@@ -7,7 +7,6 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
     public enum RequestedImageFormat
     {
         Jpeg, Png
-
     }
 
     public static class RequestImageFormatUtils
@@ -21,7 +20,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
                 case RequestedImageFormat.Png:
                     return ImageFormats.Png;
                 default:
-                    throw new ArgumentOutOfRangeException("Unexpected image format");
+                    throw new ArgumentOutOfRangeException(nameof(format), "Unexpected image format");
             }
 
         }

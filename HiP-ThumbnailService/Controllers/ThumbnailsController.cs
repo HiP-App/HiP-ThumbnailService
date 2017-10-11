@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -13,8 +12,6 @@ using Microsoft.Extensions.Options;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 
