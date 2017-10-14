@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
+﻿namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
 {
     public class CreationArgs
     {
