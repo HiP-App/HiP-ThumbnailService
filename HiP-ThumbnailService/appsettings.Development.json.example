@@ -1,0 +1,22 @@
+﻿{
+  "Logging": {
+    "IncludeScopes": false,
+    "LogLevel": {
+      "Default": "Debug",
+      "System": "Information",
+      "Microsoft": "Information"
+    }
+  },
+
+
+  "ThumbnailConfig": {
+    "SupportedSizes": {
+      "small": 50,
+      "medium": 100,
+      "large": 250
+    },
+    "HostUrl": "https://docker-hip.cs.upb.de/develop/",
+    "Path": "Thumbnails"
+  }
+
+}
