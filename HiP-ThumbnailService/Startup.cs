@@ -36,7 +36,8 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 
             services.Configure<EndpointConfig>(Configuration.GetSection("EndpointConfig"))
                 .Configure<ThumbnailConfig>(Configuration.GetSection("ThumbnailConfig"))
-                .Configure<AuthConfig>(Configuration.GetSection("Auth"));
+                .Configure<AuthConfig>(Configuration.GetSection("Auth"))
+                .Configure<CorsConfig>(Configuration);
 
             var serviceProvider = services.BuildServiceProvider(); // allows us to actually get the configured services
             var authConfig = serviceProvider.GetService<IOptions<AuthConfig>>();
@@ -56,22 +57,29 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
             {
                 options.AddPolicy("read:datastore",
                     policy => policy.Requirements.Add(new HasScopeRequirement("read:datastore", domain)));
-                //options.AddPolicy("write:datastore",
-                //    policy => policy.Requirements.Add(new HasScopeRequirement("write:datastore", domain)));
-                //options.AddPolicy("write:cms",
-                //    policy => policy.Requirements.Add(new HasScopeRequirement("write:cms", domain)));
             });
 
             services.AddMvc();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IOptions<EndpointConfig> endpointConfig)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IOptions<EndpointConfig> endpointConfig, IOptions<CorsConfig> corsConfig)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            // Use CORS (important: must be before app.UseMvc())
+            app.UseCors(builder =>
+            {
+                var corsEnvConf = corsConfig.Value.Cors[env.EnvironmentName];
+                builder
+                    .WithOrigins(corsEnvConf.Origins)
+                    .WithMethods(corsEnvConf.Methods)
+                    .WithHeaders(corsEnvConf.Headers)
+                    .WithExposedHeaders(corsEnvConf.ExposedHeaders);
+            });
 
             app.UseAuthentication();
             app.UseMvc();
