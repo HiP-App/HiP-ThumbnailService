@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>PaderbornUniversity.SILab.Hip.ThumbnailService</RootNamespace>
     <NoWarn>1701;1702;1705;1591</NoWarn>
@@ -14,8 +15,8 @@
   <ItemGroup>
     <PackageReference Include="HiP-WebserviceLib" Version="2.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
+    <PackageReference Include="NSwag.MSBuild" Version="11.11.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0001" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,4 +25,8 @@
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
+  <Target Name="NSwag" AfterTargets="Build">
+    <Exec Command="$(NSwagExe_Core20) webapi2swagger /assembly:$(TargetPath) /output:../$(ProjectName).Sdk/swagger.json" />
+    <Exec Command="$(NSwagExe_Core20) swagger2csclient /input:../$(ProjectName).Sdk/swagger.json /output:../$(ProjectName).Sdk/NSwag.g.cs /namespace:$(RootNamespace) /clientBaseClass:NSwagClientBase /useHttpClientCreationMethod:true /generateOptionalParameters:true" />
+  </Target>
 </Project>
