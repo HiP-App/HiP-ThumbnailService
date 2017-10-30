@@ -9,6 +9,10 @@
 /HiP-ThumbnailService/Thumbnails/
 appsettings.Development.json
 
+# Generated files (NSwag)
+HiP-ThumbnailService.Sdk/swagger.json
+HiP-ThumbnailService.Sdk/*.g.cs
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

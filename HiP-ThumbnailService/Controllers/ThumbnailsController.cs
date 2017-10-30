@@ -63,9 +63,9 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
 
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(FileStream),200)]
         [HttpGet]
-        public async Task<IActionResult> Get(CreationArgs args)
+        public async Task<IActionResult> Get([FromQuery]CreationArgs args)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
