@@ -1,11 +1,6 @@
-﻿
-using System.Net.Http;
-
+﻿using System.Net.Http;
 using System.Threading;
-
 using System.Threading.Tasks;
-
-
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
