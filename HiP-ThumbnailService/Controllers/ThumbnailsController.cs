@@ -61,6 +61,11 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the thumbnail for the specififed URL with the specified parameters (size, format etc.)
+        /// </summary>
+        /// <param name="args">Arguments for Thumbnail creation</param>
+        /// <returns></returns>
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
         [ProducesResponseType(typeof(FileStream),200)]
