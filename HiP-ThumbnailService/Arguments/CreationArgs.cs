@@ -12,16 +12,15 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments
 
         public string Size { get; set; }
 
-
-
         /// <summary>
         /// Specifies crop mode that is used. If no mode is specified <see cref="CropMode.FillSquare"/> is used
         /// </summary>
         [JsonIgnore]
-        public CropMode Mode { 
+        public CropMode Mode
+        {
 #pragma warning disable 0618
             get => InternalMode ?? CropMode.FillSquare;
-        set => InternalMode = value;
+            set => InternalMode = value;
 #pragma warning restore 0618
         }
 
