@@ -6,15 +6,9 @@
     <NoWarn>1701;1702;1705;1591</NoWarn>
     <Version>1.0.0</Version>
     <Version Condition="'$(VersionSuffix)' != ''">$(Version)-$(VersionSuffix)</Version>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>bin\Debug\netstandard2.0\HiP-ThumbnailService.Sdk.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>bin\Release\netstandard2.0\HiP-ThumbnailService.Sdk.xml</DocumentationFile>
-  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
