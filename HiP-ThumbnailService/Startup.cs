@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using PaderbornUniversity.SILab.Hip.Webservice;
 using Swashbuckle.AspNetCore.Swagger;
+using System.IO;
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
@@ -32,6 +33,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
                 c.SwaggerDoc("v1", new Info { Title = Name, Version = Version });
                 c.OperationFilter<SwaggerOperationFilter>();
                 c.DescribeAllEnumsAsStrings();
+                c.IncludeXmlComments(Path.ChangeExtension(typeof(Startup).Assembly.Location, ".xml"));
             });
 
             services.Configure<EndpointConfig>(Configuration.GetSection("EndpointConfig"))
