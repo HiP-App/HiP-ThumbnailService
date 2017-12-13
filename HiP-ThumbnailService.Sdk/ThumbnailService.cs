@@ -42,28 +42,29 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 
         /// <summary>
         /// Constructs an absolute URL that, when accessed, returns an image from the thumbnail service.
-        /// The specified arguments are inserted into the configured <see cref="ThumbnailConfig.ThumbnailUrlPattern"/>.
         /// 
         /// Example: Given
         /// ThumbnailServiceHost = "https://docker-hip.cs.upb.de/develop/thumbnailservice" and
         /// ThumbnailUrlPattern = "datastore/api/Media/{0}/File",
         /// => GetThumbnailUrl(42) = "https://docker-hip.cs.upb.de/develop/thumbnailservice?Url=datastore/api/Media/42/File"
         /// </summary>
-        public string GetThumbnailUrl(params string[] args) =>
+        /// <param name="args">Arguments replacing the placeholders in <see cref="ThumbnailConfig.ThumbnailUrlPattern"/></param>
+        public string GetThumbnailUrl(params object[] args) =>
             $"{_config.ThumbnailServiceHost}/api/Thumbnails?Url={GetThumbnailUrlArgument(args)}";
 
         /// <summary>
-        /// Constructs the relative URL that is used to request thumbnails by inserting the
-        /// specified arguments into the configured <see cref="ThumbnailConfig.ThumbnailUrlPattern"/>.
+        /// Constructs the relative URL that is used to request thumbnails.
         /// </summary>
-        public string GetThumbnailUrlArgument(params string[] args) =>
+        /// <param name="args">Arguments replacing the placeholders in <see cref="ThumbnailConfig.ThumbnailUrlPattern"/></param>
+        public string GetThumbnailUrlArgument(params object[] args) =>
             string.Format(_config.ThumbnailUrlPattern ?? "", args);
 
         /// <summary>
         /// Tries to delete all cached thumbnails of an image in the thumbnail service.
         /// Exceptions are catched and logged as warning.
         /// </summary>
-        public async Task<bool> TryClearThumbnailCacheAsync(params string[] args)
+        /// <param name="args">Arguments replacing the placeholders in <see cref="ThumbnailConfig.ThumbnailUrlPattern"/></param>
+        public async Task<bool> TryClearThumbnailCacheAsync(params object[] args)
         {
             if (string.IsNullOrWhiteSpace(_config.ThumbnailUrlPattern) ||
                 string.IsNullOrWhiteSpace(_config.ThumbnailServiceHost))
