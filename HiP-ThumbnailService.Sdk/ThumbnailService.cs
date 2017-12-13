@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
@@ -14,16 +18,19 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
     public class ThumbnailService
     {
         private readonly ThumbnailConfig _config;
+        private readonly ILogger<ThumbnailService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public ThumbnailsClient Thumbnails => new ThumbnailsClient(_config.ThumbnailServiceHost)
+        public ThumbnailsClient ThumbnailsClient => new ThumbnailsClient(_config.ThumbnailServiceHost)
         {
             Authorization = _httpContextAccessor.HttpContext.Request.Headers["Authorization"]
         };
 
-        public ThumbnailService(IOptions<ThumbnailConfig> config, IHttpContextAccessor httpContextAccessor)
+        public ThumbnailService(IOptions<ThumbnailConfig> config, ILogger<ThumbnailService> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _config = config.Value;
+            _logger = logger;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -45,5 +52,32 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
         /// </summary>
         public string GetThumbnailUrlArgument(params string[] args) =>
             string.Format(_config.ThumbnailUrlPattern ?? "", args);
+
+        /// <summary>
+        /// Tries to delete all cached thumbnails of an image in the thumbnail service.
+        /// Exceptions are catched and logged as warning.
+        /// </summary>
+        public async Task<bool> TryClearThumbnailCacheAsync(params string[] args)
+        {
+            if (string.IsNullOrWhiteSpace(_config.ThumbnailUrlPattern) ||
+                string.IsNullOrWhiteSpace(_config.ThumbnailServiceHost))
+            {
+                return false;
+            }
+
+            try
+            {
+                await ThumbnailsClient.DeleteAsync(GetThumbnailUrlArgument(args));
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e,
+                    $"Request to clear thumbnail cache failed for media '{id}'; " +
+                    $"thumbnail service might return outdated images (request URL was '{url}').");
+
+                return false;
+            }
+        }
     }
 }
