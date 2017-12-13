@@ -10,8 +10,12 @@
         /// Example: "https://docker-hip.cs.upb.de/develop/thumbnailservice"
         /// </summary>
         public string ThumbnailServiceHost { get; set; }
-        
-        public string GetThumbnailUrl(string relativeImageUrl) =>
-            $"{ThumbnailServiceHost}/api/Thumbnails?Url={relativeImageUrl}";
+
+        /// <summary>
+        /// Relative URL pattern for generating thumbnail URLs. Should contain one or more placeholders
+        /// "{0}", "{1}" etc. that are replaced with the ID(s) of the requested image at runtime.
+        /// Example: "datastore/api/Media/{0}/File"
+        /// </summary>
+        public string ThumbnailUrlPattern { get; set; }
     }
 }
