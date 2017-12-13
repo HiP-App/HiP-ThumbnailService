@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Arguments;
@@ -14,6 +6,14 @@ using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
 {
@@ -23,9 +23,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
     {
         private readonly ThumbnailConfig _thumbnailConfig;
 
-        /// <summary>
-        /// This dictionary is used for synchronizaing requests for the same id
-        /// </summary>
+        // This dictionary is used for synchronizing requests for the same id
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> LockDictionary = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         public ThumbnailsController(IOptions<ThumbnailConfig> thumbnailConfig)
@@ -33,6 +31,10 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             _thumbnailConfig = thumbnailConfig.Value;
         }
 
+        /// <summary>
+        /// Clears the thumbnail cache for the specified URL.
+        /// </summary>
+        /// <param name="url">URL relative to 'HostUrl' configured in the thumbnail service.</param>
         [ProducesResponseType(400)]
         [ProducesResponseType(204)]
         [HttpDelete]
@@ -41,16 +43,14 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-
             var encodedId = Convert.ToBase64String(Encoding.UTF8.GetBytes(url));
             var folderPath = Path.Combine(_thumbnailConfig.Path, encodedId);
-
             var semaphore = LockDictionary.GetOrAdd(encodedId, new SemaphoreSlim(1));
 
             await semaphore.WaitAsync();
             try
             {
-                //delete the folder
+                // delete the folder
                 if (Directory.Exists(folderPath))
                     Directory.Delete(folderPath, true);
                 return NoContent();
@@ -68,21 +68,19 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
         /// <returns></returns>
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        [ProducesResponseType(typeof(FileStream),200)]
+        [ProducesResponseType(typeof(FileStream), 200)]
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery]CreationArgs args)
         {
+            if (!string.IsNullOrEmpty(args.Size) && !_thumbnailConfig.SupportedSizes.ContainsKey(args.Size))
+                ModelState.AddModelError(nameof(args.Size), "Invalid size. Must be one of the following: " +
+                    string.Join(", ", _thumbnailConfig.SupportedSizes));
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (string.IsNullOrEmpty(args.Url))
-                return BadRequest(new { Message = "An url for image access must be provided" });
-
             var encodedId = Convert.ToBase64String(Encoding.UTF8.GetBytes(args.Url));
             var folderPath = Path.Combine(_thumbnailConfig.Path, encodedId);
-
-            if (!string.IsNullOrEmpty(args.Size) && !_thumbnailConfig.SupportedSizes.ContainsKey(args.Size))
-                return BadRequest(new { Message = "Invalid size" });
 
             var semaphore = LockDictionary.GetOrAdd(encodedId, new SemaphoreSlim(1));
             await semaphore.WaitAsync();
@@ -95,16 +93,15 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                 {
                     var client = new HttpClient();
                     client.DefaultRequestHeaders.Add("Authorization", Request.Headers["Authorization"].ToString());
-                    var hostUrl = _thumbnailConfig.HostUrl;
-                    using (var stream = await client.GetStreamAsync(hostUrl + args.Url))
-                    {
 
-                        //Create Directory if it doesn't exist
+                    using (var stream = await client.GetStreamAsync(_thumbnailConfig.HostUrl + args.Url))
+                    {
+                        // Create directory if it doesn't exist
                         Directory.CreateDirectory(folderPath);
 
                         if (string.IsNullOrEmpty(args.Size))
                         {
-                            //The original image should be returned if the size is empty
+                            // The original image should be returned if the size is empty
                             SaveImage(stream, filePath);
                         }
                         else
@@ -113,7 +110,6 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
                             GenerateThumbnail(args.Mode, stream, filePath, value);
                         }
                     }
-
                 }
 
                 return File(new FileStream(filePath, FileMode.Open), requestedImageFormat.DefaultMimeType,
@@ -132,19 +128,19 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             {
                 semaphore.Release();
             }
-
         }
 
         /// <summary>
-        /// Generates a new thumbnail which replaces the old thumbnail
+        /// Generates a new thumbnail which replaces the old thumbnail.
         /// </summary>
         /// <param name="mode">Crop mode</param>
         /// <param name="fileStream">File stream</param>
         /// <param name="thumbnailPath">Path to thumbnail</param>
-        /// <param name="value">Size value</param>
-        private static void GenerateThumbnail(CropMode mode, Stream fileStream, string thumbnailPath, int value)
+        /// <param name="size">Size value</param>
+        private static void GenerateThumbnail(CropMode mode, Stream fileStream, string thumbnailPath, int size)
         {
-            ResizeMode resizeMode = ResizeMode.Crop;
+            var resizeMode = ResizeMode.Crop;
+
             switch (mode)
             {
                 case CropMode.FillSquare:
@@ -156,8 +152,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             }
 
             SaveImage(fileStream, thumbnailPath,
-                c => c.Resize(new ResizeOptions { Mode = resizeMode, Size = new Size(value) }));
-
+                c => c.Resize(new ResizeOptions { Mode = resizeMode, Size = new Size(size) }));
         }
 
         private static void SaveImage(Stream fileStream, string filePath, Action<IImageProcessingContext<Rgba32>> operation = null)
@@ -171,8 +166,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             }
         }
 
-        private static string GetFileName(string size, CropMode mode) => string.IsNullOrEmpty(size) ? "originalImage" : $"{size}({mode})";
-
+        private static string GetFileName(string size, CropMode mode) =>
+            string.IsNullOrEmpty(size) ? "originalImage" : $"{size}({mode})";
     }
-
 }
