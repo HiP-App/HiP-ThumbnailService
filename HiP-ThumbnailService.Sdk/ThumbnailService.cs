@@ -65,16 +65,18 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
                 return false;
             }
 
+            var urlArgument = GetThumbnailUrlArgument(args);
+
             try
             {
-                await ThumbnailsClient.DeleteAsync(GetThumbnailUrlArgument(args));
+                await ThumbnailsClient.DeleteAsync(urlArgument);
                 return true;
             }
             catch (Exception e)
             {
                 _logger.LogWarning(e,
-                    $"Request to clear thumbnail cache failed for media '{id}'; " +
-                    $"thumbnail service might return outdated images (request URL was '{url}').");
+                    $"Request to clear thumbnail cache failed for relative URL '{urlArgument}'; " +
+                    $"thumbnail service might return outdated images.");
 
                 return false;
             }
