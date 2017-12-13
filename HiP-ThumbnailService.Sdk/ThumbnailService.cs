@@ -32,6 +32,12 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
             _config = config.Value;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
+
+            if (string.IsNullOrWhiteSpace(config.Value.ThumbnailServiceHost))
+                logger.LogWarning($"{nameof(ThumbnailConfig.ThumbnailServiceHost)} is not configured correctly!");
+
+            if (string.IsNullOrWhiteSpace(config.Value.ThumbnailUrlPattern))
+                logger.LogWarning($"{nameof(ThumbnailConfig.ThumbnailUrlPattern)} is not configured correctly!");
         }
 
         /// <summary>
