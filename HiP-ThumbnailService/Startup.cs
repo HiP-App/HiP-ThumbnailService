@@ -12,9 +12,6 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
     public class Startup
     {
-        private const string Name = "HiP Thumbnail Service";
-        private const string Version = "v1";
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
