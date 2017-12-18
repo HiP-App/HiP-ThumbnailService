@@ -23,7 +23,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 
         public ThumbnailsClient ThumbnailsClient => new ThumbnailsClient(_config.ThumbnailServiceHost)
         {
-            Authorization = _httpContextAccessor.HttpContext.Request.Headers["Authorization"]
+            Authorization = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"]
         };
 
         public ThumbnailService(IOptions<ThumbnailConfig> config, ILogger<ThumbnailService> logger,
