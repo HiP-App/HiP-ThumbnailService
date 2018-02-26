@@ -1,12 +1,15 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSwag.AspNetCore;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using PaderbornUniversity.SILab.Hip.Webservice;
+using PaderbornUniversity.SILab.Hip.Webservice.Logging;
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
@@ -25,7 +28,8 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
             services
                 .Configure<ThumbnailConfig>(Configuration.GetSection("Thumbnails"))
                 .Configure<AuthConfig>(Configuration.GetSection("Auth"))
-                .Configure<CorsConfig>(Configuration);
+                .Configure<CorsConfig>(Configuration)
+                .Configure<LoggingConfig>(Configuration.GetSection("HiPLoggerConfig"));
 
             var serviceProvider = services.BuildServiceProvider(); // allows us to actually get the configured services
             var authConfig = serviceProvider.GetService<IOptions<AuthConfig>>();
@@ -51,29 +55,46 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IOptions<CorsConfig> corsConfig)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory,
+            IOptions<CorsConfig> corsConfig, IOptions<LoggingConfig> loggingConfig)
         {
-            if (env.IsDevelopment())
+            loggerFactory.AddConsole(Configuration.GetSection("Logging"))
+                .AddDebug()
+                .AddHipLogger(loggingConfig.Value);
+
+            var logger = loggerFactory.CreateLogger("ApplicationStartup");
+            try
             {
-                app.UseDeveloperExceptionPage();
+                if (env.IsDevelopment())
+                {
+                    app.UseDeveloperExceptionPage();
+                }
+
+                app.UseRequestSchemeFixer();
+
+                // Use CORS (important: must be before app.UseMvc())
+                app.UseCors(builder =>
+                   {
+                       var corsEnvConf = corsConfig.Value.Cors[env.EnvironmentName];
+                       builder
+                        .WithOrigins(corsEnvConf.Origins)
+                        .WithMethods(corsEnvConf.Methods)
+                        .WithHeaders(corsEnvConf.Headers)
+                        .WithExposedHeaders(corsEnvConf.ExposedHeaders);
+                   });
+
+                app.UseAuthentication();
+                app.UseMvc();
+                app.UseSwaggerUiHip();
+
+                logger.LogInformation("ThumbnailService started successfully");
+            }
+            catch (Exception e)
+            {
+                logger.LogCritical($"ThumbnailService Startup Failed:{e.Message}");
+                throw;
             }
 
-            app.UseRequestSchemeFixer();
-
-            // Use CORS (important: must be before app.UseMvc())
-            app.UseCors(builder =>
-            {
-                var corsEnvConf = corsConfig.Value.Cors[env.EnvironmentName];
-                builder
-                    .WithOrigins(corsEnvConf.Origins)
-                    .WithMethods(corsEnvConf.Methods)
-                    .WithHeaders(corsEnvConf.Headers)
-                    .WithExposedHeaders(corsEnvConf.ExposedHeaders);
-            });
-
-            app.UseAuthentication();
-            app.UseMvc();
-            app.UseSwaggerUiHip();
         }
     }
 }
