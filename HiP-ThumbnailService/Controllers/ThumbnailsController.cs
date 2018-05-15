@@ -50,7 +50,7 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Controllers
             await semaphore.WaitAsync();
             try
             {
-                // delete the folder
+                // Delete the folder
                 if (Directory.Exists(folderPath))
                     Directory.Delete(folderPath, true);
                 return NoContent();
