@@ -1,21 +1,20 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NSwag.AspNetCore;
 using PaderbornUniversity.SILab.Hip.ThumbnailService.Utility;
 using PaderbornUniversity.SILab.Hip.Webservice;
-using Swashbuckle.AspNetCore.Swagger;
-using System.IO;
+using PaderbornUniversity.SILab.Hip.Webservice.Logging;
 
 namespace PaderbornUniversity.SILab.Hip.ThumbnailService
 {
     public class Startup
     {
-        private const string Name = "HiP Thumbnail Service";
-        private const string Version = "v1";
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -26,20 +25,11 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            // Register the Swagger generator
-            services.AddSwaggerGen(c =>
-            {
-                // Define a Swagger document
-                c.SwaggerDoc("v1", new Info { Title = Name, Version = Version });
-                c.OperationFilter<SwaggerOperationFilter>();
-                c.DescribeAllEnumsAsStrings();
-                c.IncludeXmlComments(Path.ChangeExtension(typeof(Startup).Assembly.Location, ".xml"));
-            });
-
-            services.Configure<EndpointConfig>(Configuration.GetSection("EndpointConfig"))
-                .Configure<ThumbnailConfig>(Configuration.GetSection("ThumbnailConfig"))
+            services
+                .Configure<ThumbnailConfig>(Configuration.GetSection("Thumbnails"))
                 .Configure<AuthConfig>(Configuration.GetSection("Auth"))
-                .Configure<CorsConfig>(Configuration);
+                .Configure<CorsConfig>(Configuration)
+                .Configure<LoggingConfig>(Configuration.GetSection("HiPLoggerConfig"));
 
             var serviceProvider = services.BuildServiceProvider(); // allows us to actually get the configured services
             var authConfig = serviceProvider.GetService<IOptions<AuthConfig>>();
@@ -65,43 +55,45 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IOptions<EndpointConfig> endpointConfig, IOptions<CorsConfig> corsConfig)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory,
+            IOptions<CorsConfig> corsConfig, IOptions<LoggingConfig> loggingConfig)
         {
-            if (env.IsDevelopment())
+            loggerFactory.AddConsole(Configuration.GetSection("Logging"))
+                .AddDebug()
+                .AddHipLogger(loggingConfig.Value);
+
+            var logger = loggerFactory.CreateLogger("ApplicationStartup");
+            try
             {
-                app.UseDeveloperExceptionPage();
+                if (env.IsDevelopment())
+                {
+                    app.UseDeveloperExceptionPage();
+                }
+
+                app.UseRequestSchemeFixer();
+
+                // Use CORS (important: must be before app.UseMvc())
+                app.UseCors(builder =>
+                   {
+                       var corsEnvConf = corsConfig.Value.Cors[env.EnvironmentName];
+                       builder
+                        .WithOrigins(corsEnvConf.Origins)
+                        .WithMethods(corsEnvConf.Methods)
+                        .WithHeaders(corsEnvConf.Headers)
+                        .WithExposedHeaders(corsEnvConf.ExposedHeaders);
+                   });
+
+                app.UseAuthentication();
+                app.UseMvc();
+                app.UseSwaggerUiHip();
+
+                logger.LogInformation("ThumbnailService started successfully");
             }
-
-            // Use CORS (important: must be before app.UseMvc())
-            app.UseCors(builder =>
+            catch (Exception e)
             {
-                var corsEnvConf = corsConfig.Value.Cors[env.EnvironmentName];
-                builder
-                    .WithOrigins(corsEnvConf.Origins)
-                    .WithMethods(corsEnvConf.Methods)
-                    .WithHeaders(corsEnvConf.Headers)
-                    .WithExposedHeaders(corsEnvConf.ExposedHeaders);
-            });
-
-            app.UseAuthentication();
-            app.UseMvc();
-
-            // Swagger / Swashbuckle configuration:
-            // Enable middleware to serve generated Swagger as a JSON endpoint
-            app.UseSwagger(c =>
-            {
-                c.PreSerializeFilters.Add((swaggerDoc, httpReq) => swaggerDoc.Host = httpReq.Host.Value);
-            });
-
-            // Configure SwaggerUI endpoint
-            app.UseSwaggerUI(c =>
-            {
-                var swaggerJsonUrl = string.IsNullOrEmpty(endpointConfig.Value.SwaggerEndpoint)
-                    ? $"/swagger/{Version}/swagger.json"
-                    : endpointConfig.Value.SwaggerEndpoint;
-
-                c.SwaggerEndpoint(swaggerJsonUrl, $"{Name} {Version}");
-            });
+                logger.LogCritical($"ThumbnailService Startup Failed:{e.Message}");
+                throw;
+            }
 
         }
     }

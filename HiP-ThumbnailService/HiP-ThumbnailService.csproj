@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>PaderbornUniversity.SILab.Hip.ThumbnailService</RootNamespace>
     <NoWarn>1701;1702;1705;1591</NoWarn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -13,10 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HiP-WebserviceLib" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
-    <PackageReference Include="NSwag.MSBuild" Version="11.11.3" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0001" />
+    <PackageReference Include="HiP-WebserviceLib" Version="4.0.2-develop" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1.0" />
+    <PackageReference Include="NSwag.MSBuild" Version="11.17.15" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0004" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +26,7 @@
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
   <Target Name="NSwag" AfterTargets="Build" Condition="'$(OS)'=='Windows_NT'">
-    <Exec Command="$(NSwagExe_Core20) webapi2swagger /assembly:$(TargetPath) /output:../$(ProjectName).Sdk/swagger.json" />
-    <Exec Command="$(NSwagExe_Core20) swagger2csclient /input:../$(ProjectName).Sdk/swagger.json /output:../$(ProjectName).Sdk/NSwag.g.cs /namespace:$(RootNamespace) /clientBaseClass:NSwagClientBase /useHttpClientCreationMethod:true /generateOptionalParameters:true" />
+    <Exec Command="$(NSwagExe_Core21) webapi2swagger /assembly:$(TargetPath) /output:../$(ProjectName).Sdk/swagger.json" />
+    <Exec Command="$(NSwagExe_Core21) swagger2csclient /input:../$(ProjectName).Sdk/swagger.json /output:../$(ProjectName).Sdk/NSwag.g.cs /namespace:$(RootNamespace) /clientBaseClass:NSwagClientBase /useHttpClientCreationMethod:true /generateOptionalParameters:true" />
   </Target>
 </Project>

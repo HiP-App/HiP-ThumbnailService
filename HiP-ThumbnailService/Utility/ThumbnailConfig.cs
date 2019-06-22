@@ -5,18 +5,23 @@ namespace PaderbornUniversity.SILab.Hip.ThumbnailService.Utility
     public class ThumbnailConfig
     {
         /// <summary>
-        /// Path to thumbnail images
+        /// Path where thumbnail images are stored.
+        /// Default value: "Thumbnails"
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = "Thumbnails";
 
         /// <summary>
-        /// Url which describes where the service is hosted. Should end with a slash
+        /// URL which is a common prefix of all services using the thumbnail service.
+        /// Should end with a slash. This prefix is to be omitted when requesting
+        /// thumbnails from the service.
+        /// Example: "https://docker-hip.cs.upb.de/develop/"
         /// </summary>
         public string HostUrl { get; set; }
 
         /// <summary>
-        /// Dictionary for the supported sizes
+        /// The image sizes options that can be chosen when requesting thumbnails.
+        /// Example: { "small": 50, "medium": 100, "large": 250 }
         /// </summary>
-        public Dictionary<string,int> SupportedSizes { get; set; }
+        public Dictionary<string, int> SupportedSizes { get; set; }
     }
 }
